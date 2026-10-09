@@ -39,6 +39,7 @@ qnoc-kalama-objs			:= kalama.o
 qnoc-blair-objs				:= blair.o
 qnoc-holi-objs				:= holi.o
 qnoc-pitti-objs				:= pitti.o
+qnoc-parrot-objs				:= parrot.o
 icc-smd-rpm-objs			:= smd-rpm.o
 qnoc-qos-obj				:= qnoc-qos.o
 
@@ -75,6 +76,7 @@ obj-$(CONFIG_INTERCONNECT_QCOM_BLAIR) += qnoc-blair.o
 obj-$(CONFIG_INTERCONNECT_QCOM_LEMANS) += qnoc-lemans.o
 obj-$(CONFIG_INTERCONNECT_QCOM_HOLI) += qnoc-holi.o
 obj-$(CONFIG_INTERCONNECT_QCOM_PITTI) += qnoc-pitti.o
+obj-$(CONFIG_INTERCONNECT_QCOM_PARROT) += qnoc-parrot.o
 obj-$(CONFIG_INTERCONNECT_QCOM_MONACO_AUTO) += qnoc-monaco-auto.o
 obj-$(CONFIG_INTERCONNECT_QCOM_ANORAK) += qnoc-anorak.o
 obj-$(CONFIG_INTERCONNECT_QCOM_SMD_RPM) += icc-smd-rpm.o

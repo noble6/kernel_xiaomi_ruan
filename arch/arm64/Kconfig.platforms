@@ -332,6 +332,15 @@ config ARCH_HOLI
 	  HOLI chipset. If you do not wish to build a kernel that
 	  runs on this chipset or if you are unsure, say 'N' here.
 
+config ARCH_PARROT
+	bool "Enable support for Qualcomm Technologies, Inc. Parrot"
+	depends on ARCH_QCOM
+	help
+	  This enables support for Qualcomm Technologies, Inc.
+	  Parrot chipset. If you do not wish to build a kernel
+	  that runs on this chipset or if you are unsure,
+	  say 'N' here.
+
 config ARCH_PITTI
 	bool "Enable support for Qualcomm Technologies, Inc. Pitti"
 	depends on ARCH_QCOM

@@ -15,6 +15,7 @@ obj-$(CONFIG_PHY_QCOM_UFS_V4_BLAIR)	+= phy-qcom-ufs-qmp-v4-blair.o
 obj-$(CONFIG_PHY_QCOM_UFS_V4_LAHAINA)	+= phy-qcom-ufs-qmp-v4-lahaina.o
 obj-$(CONFIG_PHY_QCOM_UFS_V3_SM4350)	+= phy-qcom-ufs-qmp-v3.o
 obj-$(CONFIG_PHY_QCOM_UFS_V4_CROW)	+= phy-qcom-ufs-qmp-v4-crow.o
+obj-$(CONFIG_PHY_QCOM_UFS_V4_PARROT)	+= phy-qcom-ufs-qmp-v4-parrot.o
 
 obj-$(CONFIG_PHY_QCOM_QMP_COMBO)	+= phy-qcom-qmp-combo.o
 obj-$(CONFIG_PHY_QCOM_QMP_PCIE)		+= phy-qcom-qmp-pcie.o
