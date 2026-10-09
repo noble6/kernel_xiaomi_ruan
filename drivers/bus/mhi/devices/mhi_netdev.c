@@ -709,8 +709,8 @@ static int mhi_netdev_enable_iface(struct mhi_netdev *mhi_netdev)
 		goto napi_alloc_fail;
 	}
 
-	netif_napi_add(mhi_netdev->ndev, mhi_netdev->napi,
-		       mhi_netdev_poll, MHI_NETDEV_NAPI_POLL_WEIGHT);
+	netif_napi_add_weight(mhi_netdev->ndev, mhi_netdev->napi,
+			      mhi_netdev_poll, MHI_NETDEV_NAPI_POLL_WEIGHT);
 
 	ret = register_netdev(mhi_netdev->ndev);
 	if (ret) {
