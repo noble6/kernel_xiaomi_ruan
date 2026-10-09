@@ -218,10 +218,24 @@ def compatibles(root):
     return f'{n} renamed'
 
 
+def soc_ids(root):
+    """Let the bootloader pick this dtb on both Parrot and ParrotP.
+
+    ruan ships with both "Parrot SoC" (msm-id 0x219, 0x265) and "ParrotP
+    SoC" (0x277, 0x247, 0x27e) dtbs, which differ only in the root
+    compatible.
+    """
+    root.set('qcom,msm-id', '<0x219 0x10000 0x265 0x10000 0x277 0x10000 '
+             '0x247 0x10000 0x27e 0x10000>')
+    root.set('compatible', '"qcom,parrot"')
+    return 'Parrot and ParrotP'
+
+
 CONVERSIONS = [
     qup_wrappers,
     compatibles,
     node_paths,
+    soc_ids,
 ]
 
 
