@@ -49,7 +49,16 @@
 #include <linux/usb/composite.h>
 #include <linux/soc/qcom/wcd939x-i2c.h>
 #include <linux/usb/repeater.h>
-#include "../../misc/hwid/hwid.h"
+/*
+ * Xiaomi's hwid driver isn't part of the source release. Its project IDs
+ * only select quirks for other devices, so report no project.
+ */
+#define HARDWARE_PROJECT_N3	1
+#define HARDWARE_PROJECT_N18	2
+#define HARDWARE_PROJECT_O81	3
+#define HARDWARE_PROJECT_O82	4
+#define HARDWARE_PROJECT_N11U	5
+static inline uint32_t get_hw_version_platform(void) { return 0; }
 
 #include "core.h"
 #include "gadget.h"
