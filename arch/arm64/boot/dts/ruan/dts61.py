@@ -231,11 +231,39 @@ def soc_ids(root):
     return 'Parrot and ParrotP'
 
 
+def splash_console(root):
+    """Debug builds (DEBUG_FB=1): draw the kernel console on the splash.
+
+    The bootloader leaves the video mode panel scanning out its splash
+    buffer; describing it as a simple-framebuffer gives fbcon a screen
+    before any display driver loads.
+    """
+    import os
+    if os.environ.get('DEBUG_FB') != '1':
+        return 'off'
+    chosen = next(c for c in root.children if c.name == 'chosen')
+    chosen.set('#address-cells', '<0x02>')
+    chosen.set('#size-cells', '<0x02>')
+    chosen.set('ranges', None)
+    fb = Node('framebuffer@b8000000')
+    fb.props = [
+        ['compatible', '"simple-framebuffer"'],
+        ['reg', '<0x00 0xb8000000 0x00 0x2b00000>'],
+        ['width', '<1600>'],
+        ['height', '<2560>'],
+        ['stride', '<6400>'],
+        ['format', '"a8r8g8b8"'],
+    ]
+    chosen.add(fb)
+    return 'simple-framebuffer at the splash region'
+
+
 CONVERSIONS = [
     qup_wrappers,
     compatibles,
     node_paths,
     soc_ids,
+    splash_console,
 ]
 
 
