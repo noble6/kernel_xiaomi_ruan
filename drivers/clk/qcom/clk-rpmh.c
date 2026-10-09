@@ -748,6 +748,36 @@ static struct clk_hw *of_clk_rpmh_hw_get(struct of_phandle_args *clkspec,
 	return rpmh->clks[idx];
 }
 
+/* parrot: the waipio, lahaina and parrot resources it used on 5.10 */
+DEFINE_CLK_RPMH_ARC(parrot, bi_tcxo, bi_tcxo_ao, "xo.lvl", 0x3, 4);
+DEFINE_CLK_RPMH_VRM(parrot, ln_bb_clk2, ln_bb_clk2_ao, "lnbclka2", 4);
+DEFINE_CLK_RPMH_VRM(parrot, ln_bb_clk3, ln_bb_clk3_ao, "lnbclka3", 2);
+DEFINE_CLK_RPMH_VRM(parrot, rf_clk1, rf_clk1_ao, "rfclka1", 1);
+DEFINE_CLK_RPMH_VRM_OPT(parrot, rf_clk2, rf_clk2_ao, "rfclka2", 1);
+DEFINE_CLK_RPMH_VRM_OPT(parrot, rf_clk5, rf_clk5_ao, "rfclka5", 1);
+DEFINE_CLK_RPMH_BCM(parrot, ipa, "IP0");
+
+static struct clk_hw *parrot_rpmh_clocks[] = {
+	[RPMH_CXO_CLK]		= &parrot_bi_tcxo.hw,
+	[RPMH_CXO_CLK_A]	= &parrot_bi_tcxo_ao.hw,
+	[RPMH_LN_BB_CLK2]	= &parrot_ln_bb_clk2.hw,
+	[RPMH_LN_BB_CLK2_A]	= &parrot_ln_bb_clk2_ao.hw,
+	[RPMH_LN_BB_CLK3]	= &parrot_ln_bb_clk3.hw,
+	[RPMH_LN_BB_CLK3_A]	= &parrot_ln_bb_clk3_ao.hw,
+	[RPMH_RF_CLK1]		= &parrot_rf_clk1.hw,
+	[RPMH_RF_CLK1_A]	= &parrot_rf_clk1_ao.hw,
+	[RPMH_RF_CLK2]		= &parrot_rf_clk2.hw,
+	[RPMH_RF_CLK2_A]	= &parrot_rf_clk2_ao.hw,
+	[RPMH_RF_CLK5]		= &parrot_rf_clk5.hw,
+	[RPMH_RF_CLK5_A]	= &parrot_rf_clk5_ao.hw,
+	[RPMH_IPA_CLK]		= &parrot_ipa.hw,
+};
+
+static const struct clk_rpmh_desc clk_rpmh_parrot = {
+	.clks = parrot_rpmh_clocks,
+	.num_clks = ARRAY_SIZE(parrot_rpmh_clocks),
+};
+
 DEFINE_CLK_RPMH_ARC(kalama, xo_pad, xo_pad_ao, "xo.lvl", 0x03, 2);
 DEFINE_CLK_RPMH_FIXED(kalama, bi_tcxo, bi_tcxo_ao, xo_pad, xo_pad_ao, 2);
 DEFINE_CLK_RPMH_VRM_OPT(kalama, rf_clk1, rf_clk1_ao, "clka1", 1);
@@ -1005,6 +1035,7 @@ static const struct of_device_id clk_rpmh_match_table[] = {
 	{ .compatible = "qcom,sm8450-rpmh-clk", .data = &clk_rpmh_sm8450},
 	{ .compatible = "qcom,sc7280-rpmh-clk", .data = &clk_rpmh_sc7280},
 	{ .compatible = "qcom,kalama-rpmh-clk", .data = &clk_rpmh_kalama},
+	{ .compatible = "qcom,parrot-rpmh-clk", .data = &clk_rpmh_parrot},
 	{ .compatible = "qcom,pineapple-rpmh-clk", .data = &clk_rpmh_pineapple},
 	{ .compatible = "qcom,sm6150-rpmh-clk", .data = &clk_rpmh_sm6150},
 	{ .compatible = "qcom,lemans-rpmh-clk", .data = &clk_rpmh_lemans},
