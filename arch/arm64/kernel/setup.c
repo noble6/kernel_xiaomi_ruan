@@ -29,6 +29,7 @@
 #include <linux/of_fdt.h>
 #include <linux/efi.h>
 #include <linux/psci.h>
+#include <linux/ruan_probe.h>
 #include <linux/sched/task.h>
 #include <linux/scs.h>
 #include <linux/mm.h>
@@ -309,6 +310,8 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 	early_ioremap_init();
 
 	setup_machine_fdt(__fdt_pointer);
+	ruan_probe_setup();
+	ruan_probe(1);
 
 	/*
 	 * Initialise the static keys early as they may be enabled by the

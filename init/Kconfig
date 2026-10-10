@@ -131,6 +131,14 @@ config BROKEN_ON_SMP
 	depends on BROKEN || !SMP
 	default y
 
+config RUAN_BOOT_PROBE
+	bool "ruan bring-up boot checkpoints (ruan_probe=N)"
+	depends on ARM64
+	help
+	  Power the device off when boot reaches checkpoint N given with
+	  ruan_probe=N on the command line, to find where an early boot
+	  without console dies. Bring-up only.
+
 config INIT_ENV_ARG_LIMIT
 	int
 	default 32 if !UML

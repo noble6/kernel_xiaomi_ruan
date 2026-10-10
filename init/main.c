@@ -25,6 +25,7 @@
 #include <linux/delay.h>
 #include <linux/ioport.h>
 #include <linux/init.h>
+#include <linux/ruan_probe.h>
 #include <linux/initrd.h>
 #include <linux/memblock.h>
 #include <linux/acpi.h>
@@ -1132,6 +1133,7 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	arch_post_acpi_subsys_init();
 	kcsan_init();
 
+	ruan_probe(2);
 	/* Do the rest non-__init'ed, we're now alive */
 	arch_call_rest_init();
 
@@ -1532,6 +1534,7 @@ static int __ref kernel_init(void *unused)
 
 	do_sysctl_args();
 
+	ruan_probe(5);
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
 		if (!ret)
@@ -1619,7 +1622,9 @@ static noinline void __init kernel_init_freeable(void)
 	if (!early_page_ext_enabled())
 		page_ext_init();
 
+	ruan_probe(3);
 	do_basic_setup();
+	ruan_probe(4);
 
 	wait_for_initramfs();
 	console_on_rootfs();

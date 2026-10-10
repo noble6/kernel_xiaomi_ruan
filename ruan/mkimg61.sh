@@ -11,6 +11,7 @@
 #   DEBUG=1  kernel console on the splash screen (build with ruan_debug.config)
 #   NOMOD=1  load no modules (kernel + dtb only)
 #   SUFFIX   appended to the output names, default 61
+#   CMDLINE  appended to the kernel command line
 set -euo pipefail
 cd /mnt/directstorage/kernel-src
 W=$PWD/work/rom61
@@ -65,9 +66,9 @@ python3 -I $K/arch/arm64/boot/dts/ruan/dts61.py $K/arch/arm64/boot/dts/ruan/ruan
 dtc -q -I dts -O dtb -o $W/ruan$SUFFIX.dtb $W/ruan$SUFFIX.dts
 
 # vendor_boot: stock header values, our ramdisk and dtb
-python3 -I - "$W" "$SUFFIX" "${DEBUG:-0}" <<'EOF'
+python3 -I - "$W" "$SUFFIX" "${DEBUG:-0}" "${CMDLINE:-}" <<'EOF'
 import shlex, subprocess, sys
-w, suffix, debug = sys.argv[1:]
+w, suffix, debug, extra = sys.argv[1:]
 args = shlex.split(subprocess.run(['unpack_bootimg', '--boot_img', w + '/vendor_boot.img',
                                    '--out', w + '/vb', '--format', 'mkbootimg'],
                                   capture_output=True, text=True, check=True).stdout)
@@ -79,8 +80,13 @@ while i < len(args):
         out += [a, w + '/ruan' + suffix + '.dtb']; i += 2; continue
     if a == '--vendor_ramdisk_fragment':
         out += [a, w + '/vendor_ramdisk' + suffix]; i += 2; continue
-    if a == '--vendor_cmdline' and debug == '1':
-        out += [a, args[i + 1] + ' console=tty0 fbcon=font:TER16x32 loglevel=8 ignore_loglevel printk.time=1 clk_ignore_unused pd_ignore_unused']; i += 2; continue
+    if a == '--vendor_cmdline':
+        c = args[i + 1]
+        if debug == '1':
+            c += ' console=tty0 fbcon=font:TER16x32 loglevel=8 ignore_loglevel printk.time=1 clk_ignore_unused pd_ignore_unused'
+        if extra:
+            c += ' ' + extra
+        out += [a, c]; i += 2; continue
     out.append(a); i += 1
 subprocess.run(['mkbootimg'] + out + ['--vendor_boot', w + '/vendor_boot' + suffix + '.img'], check=True)
 EOF
