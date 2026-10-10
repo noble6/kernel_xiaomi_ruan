@@ -27,18 +27,32 @@ load on 6.1.
 
 ## Status
 
-Done:
-- parrot clock controllers, pinctrl, interconnect and UFS PHY
-- parrot GKI config fragment
-- Image and in-tree modules build
+Proven on the device (2026-10-10, debug builds):
+- the bootloader accepts our boot.img + vendor_boot.img and picks our dtb
+  (flash `boot_a` / `vendor_boot_a` explicitly: ruan's bootloader doesn't
+  report has-slot for vendor_boot, so `fastboot flash vendor_boot` misses)
+- the kernel boots through all built-in initcalls and runs the ramdisk's
+  init (ruan/dbgshell/init)
+- loading the modules then ends in a power off or watchdog reset ~29s
+  after boot; which one, and why, is open
 
-To do, roughly in this order:
-1. Device tree: the stock dtb uses 5.10 compatibles that 6.1 drivers no
-   longer match (`qcom,qupv3-geni-se`, `qcom,parrot-rpmh-clk`, the
-   `qcom,parrot-*-pas` remoteprocs, `qcom,cpufreq-hw-epss` and others).
-   Add them to the drivers or adapt the dtb.
-2. First boot to adb, debugged through the pstore/ramoops log.
-3. Out-of-tree Qualcomm modules: display, GPU (KGSL), touch, charger,
-   Wi-Fi, audio, IPA/data, video, camera.
-4. Xiaomi modules without source (speaker amplifiers, hall sensor,
+ruan gives a bring-up almost no feedback: the panel backlight goes off
+when the kernel starts, pstore keeps nothing across reboots (mtdoops
+shares the ramoops region), the bootloader ignores the IMEM restart
+reason and EDL entry is refused. Signals that work: PSCI SYSTEM_OFF
+(dark ~30s, then ruan powers back on) against a watchdog reset (~20s),
+see init/ruan_probe.c and the dbg_stage values in ruan/dbgshell/init.
+
+Next: a real log channel. Build the USB device stack (dwc3-msm, its
+PHYs, gcc/rpmh clocks, rpmh regulators, interconnect, SMMU, pinctrl,
+GDSCs) and the APSS watchdog (qcom_wdt_core + qcom_soc_wdt, which 6.1
+split out) into the kernel, and use the USB serial gadget as console
+(console=ttyGS0), so the kernel streams its log to the PC from early
+boot.
+
+To do after that, roughly in this order:
+1. The module that powers off / the watchdog.
+2. Boot to Android: display, touch, charger, Wi-Fi, audio, IPA/data,
+   video, camera (out-of-tree Qualcomm modules).
+3. Xiaomi modules without source (speaker amplifiers, hall sensor,
    millet, mi_memory and others): replace or drop.

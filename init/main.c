@@ -957,14 +957,18 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	pr_notice("%s", linux_banner);
 	early_security_init();
 	setup_arch(&command_line);
+	ruan_probe(111);
 	setup_boot_config();
 	setup_command_line(command_line);
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
 	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */
+	ruan_probe(112);
 	boot_cpu_hotplug_init();
 
 	build_all_zonelists(NULL);
+
+	ruan_probe(113);
 	page_alloc_init();
 
 	pr_notice("Kernel command line: %s\n", saved_command_line);
@@ -994,7 +998,9 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	vfs_caches_init_early();
 	sort_main_extable();
 	trap_init();
+	ruan_probe(114);
 	mm_init();
+	ruan_probe(115);
 	poking_init();
 	ftrace_init();
 
@@ -1007,6 +1013,7 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	 * time - but meanwhile we still have a functioning scheduler.
 	 */
 	sched_init();
+	ruan_probe(116);
 
 	if (WARN(!irqs_disabled(),
 		 "Interrupts were enabled *very* early, fixing it\n"))
@@ -1029,6 +1036,8 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 
 	rcu_init();
 
+	ruan_probe(117);
+
 	/* Trace events are available after this */
 	trace_init();
 
@@ -1039,14 +1048,17 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	/* init some links before init_ISA_irqs() */
 	early_irq_init();
 	init_IRQ();
+	ruan_probe(118);
 	tick_init();
 	rcu_init_nohz();
 	init_timers();
+	ruan_probe(119);
 	srcu_init();
 	hrtimers_init();
 	softirq_init();
 	timekeeping_init();
 	time_init();
+	ruan_probe(120);
 
 	/* This must be after timekeeping is initialized */
 	random_init();
@@ -1056,12 +1068,15 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	boot_init_stack_canary();
 
 	perf_event_init();
+
+	ruan_probe(121);
 	profile_init();
 	call_function_init();
 	WARN(!irqs_disabled(), "Interrupts were enabled early\n");
 
 	early_boot_irqs_disabled = false;
 	local_irq_enable();
+	ruan_probe(122);
 
 	kmem_cache_init_late();
 
@@ -1071,6 +1086,7 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 	 * this. But we do want output early, in case something goes wrong.
 	 */
 	console_init();
+	ruan_probe(123);
 	if (panic_later)
 		panic("Too many boot %s vars at `%s'", panic_later,
 		      panic_param);
@@ -1100,6 +1116,7 @@ asmlinkage __visible void __init __no_sanitize_address start_kernel(void)
 		late_time_init();
 	sched_clock_init();
 	calibrate_delay();
+	ruan_probe(124);
 
 	arch_cpu_finalize_init();
 
@@ -1354,6 +1371,9 @@ static int __init ignore_unknown_bootoption(char *param, char *val,
 	return 0;
 }
 
+/* ruan_probe=1000+N: before the Nth initcall of the levels below */
+static int ruan_initcall_nr __initdata;
+
 static void __init do_initcall_level(int level, char *command_line)
 {
 	initcall_entry_t *fn;
@@ -1365,8 +1385,10 @@ static void __init do_initcall_level(int level, char *command_line)
 		   NULL, ignore_unknown_bootoption);
 
 	trace_initcall_level(initcall_level_names[level]);
-	for (fn = initcall_levels[level]; fn < initcall_levels[level+1]; fn++)
+	for (fn = initcall_levels[level]; fn < initcall_levels[level+1]; fn++) {
+		ruan_probe(1000 + ruan_initcall_nr++);
 		do_one_initcall(initcall_from_entry(fn));
+	}
 }
 
 static void __init do_initcalls(void)
@@ -1382,6 +1404,7 @@ static void __init do_initcalls(void)
 	for (level = 0; level < ARRAY_SIZE(initcall_levels) - 1; level++) {
 		/* Parser modifies command_line, restore it each time */
 		strcpy(command_line, saved_command_line);
+		ruan_probe(10 + level);
 		do_initcall_level(level, command_line);
 	}
 
@@ -1408,9 +1431,14 @@ static void __init do_pre_smp_initcalls(void)
 {
 	initcall_entry_t *fn;
 
+	int nr = 0;
+
 	trace_initcall_level("early");
-	for (fn = __initcall_start; fn < __initcall0_start; fn++)
+	for (fn = __initcall_start; fn < __initcall0_start; fn++) {
+		/* ruan_probe=900+N: before the Nth early initcall */
+		ruan_probe(900 + nr++);
 		do_one_initcall(initcall_from_entry(fn));
+	}
 }
 
 static int run_init_process(const char *init_filename)
@@ -1593,6 +1621,7 @@ void __init console_on_rootfs(void)
 
 static noinline void __init kernel_init_freeable(void)
 {
+	ruan_probe(6);
 	/* Now the scheduler is fully set up and can do blocking allocations */
 	gfp_allowed_mask = __GFP_BITS_MASK;
 
@@ -1610,10 +1639,13 @@ static noinline void __init kernel_init_freeable(void)
 	init_mm_internals();
 
 	rcu_init_tasks_generic();
+	ruan_probe(7);
 	do_pre_smp_initcalls();
+	ruan_probe(8);
 	lockup_detector_init();
 
 	smp_init();
+	ruan_probe(9);
 	sched_init_smp();
 
 	padata_init();

@@ -1,0 +1,91 @@
+#!/bin/busybox sh
+# Bring-up init for the 6.1 kernel on ruan: a root shell on a USB serial
+# port (/dev/ttyACM0 on the PC) instead of Android.
+#
+# Loads the modules in /dbgshell.load (enough for USB), turns the USB
+# port into an ACM serial gadget and runs a shell on it. The kernel log
+# goes to /tmp/kmsg.log as well.
+#
+# dbg_stage=N on the kernel command line stops early and reboots to the
+# bootloader (fastboot), to show how far it got without a console:
+#   dbg_stage=0  right away
+#   dbg_stage=1  after loading the modules
+#   dbg_stage=2  after setting up the USB gadget
+# dbg_stage=10, 11, 12 stop at the same points and wait forever instead:
+# a device that stays dark without rebooting got there.
+# dbg_stage=30, 31, 32 power off there (dark ~30s, then ruan powers back
+# on by itself; a watchdog reset comes after ~20s).
+
+/bin/busybox mkdir -p /bin /sbin /proc /sys /dev /tmp /mnt
+/bin/busybox --install -s /bin
+export PATH=/bin:/sbin
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t tmpfs tmpfs /dev
+mount -t tmpfs tmpfs /tmp
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+mount -t configfs configfs /sys/kernel/config 2>/dev/null
+mount -t debugfs debugfs /sys/kernel/debug 2>/dev/null
+echo /bin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+
+log() { echo "dbgshell: $*" > /dev/kmsg; }
+stage=$(sed -n 's/.*dbg_stage=\([0-9]*\).*/\1/p' /proc/cmdline)
+checkpoint() {
+	[ "$stage" = "$1" ] && { log "stage $1 reached"; /bin/rb edl; }
+	[ "$stage" = "1$1" ] && { log "stage $1 reached, waiting"; while true; do sleep 3600; done; }
+	[ "$stage" = "3$1" ] && { log "stage $1 reached, powering off"; poweroff -f; }
+}
+checkpoint 0
+cat /proc/kmsg > /tmp/kmsg.log 2>/dev/null &
+
+log "loading modules"
+for m in $(cat /dbgshell.load); do
+	if ! insmod /lib/modules/$m 2>/tmp/insmod.err; then
+		log "insmod $m failed: $(cat /tmp/insmod.err)"
+	fi
+done
+mdev -s
+log "modules loaded"
+checkpoint 1
+
+# dwc3: device mode
+for i in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e /sys/bus/platform/devices/a600000.ssusb/mode ] && break
+	sleep 1
+done
+echo peripheral > /sys/bus/platform/devices/a600000.ssusb/mode 2>/dev/null
+
+# ACM serial gadget
+G=/sys/kernel/config/usb_gadget/dbg
+mkdir -p $G
+echo 0x1d6b > $G/idVendor
+echo 0x0104 > $G/idProduct
+mkdir -p $G/strings/0x409
+echo ruan61 > $G/strings/0x409/serialnumber
+echo "ruan 6.1 debug shell" > $G/strings/0x409/product
+mkdir -p $G/functions/acm.GS0 $G/configs/c.1
+ln -s $G/functions/acm.GS0 $G/configs/c.1/
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+	udc=$(ls /sys/class/udc 2>/dev/null | head -1)
+	[ -n "$udc" ] && break
+	sleep 1
+done
+log "udc: $udc"
+echo "$udc" > $G/UDC
+mdev -s
+checkpoint 2
+
+while true; do
+	if [ -e /dev/ttyGS0 ]; then
+		setsid sh -c 'exec sh -i </dev/ttyGS0 >/dev/ttyGS0 2>&1'
+	else
+		mdev -s
+	fi
+	sleep 1
+done &
+
+# PID 1 must not exit
+while true; do sleep 3600; done

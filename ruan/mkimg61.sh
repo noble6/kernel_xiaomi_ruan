@@ -51,6 +51,15 @@ for l in open(stock):
     m = renamed.get(l.strip(), l.strip())
     if m in have and m not in order:
         order.append(m)
+# 6.1 split the APSS watchdog driver out of qcom_wdt_core; load it right
+# after, or nothing pets the watchdog before it resets the device (~20s).
+if 'qcom_soc_wdt.ko' in have:
+    order = [m for m in order if m != 'qcom_soc_wdt.ko']
+    i = order.index('qcom_wdt_core.ko') + 1 if 'qcom_wdt_core.ko' in order else 0
+    order.insert(i, 'qcom_soc_wdt.ko')
+# smem, which the watchdog needs, waits for the hwspinlock
+if 'qcom_hwspinlock.ko' in have:
+    order = ['qcom_hwspinlock.ko'] + [m for m in order if m != 'qcom_hwspinlock.ko']
 order += [m for m in have if m not in order]
 if os.environ.get('NOMOD') == '1':
     order = []

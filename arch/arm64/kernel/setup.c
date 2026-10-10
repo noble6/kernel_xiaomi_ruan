@@ -319,8 +319,11 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 	 */
 	jump_label_init();
 	parse_early_param();
+	ruan_probe(101);
 
 	dynamic_scs_init();
+
+	ruan_probe(102);
 
 	/*
 	 * Unmask asynchronous aborts and fiq after bringing up possible
@@ -328,6 +331,7 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 	 * occurred).
 	 */
 	local_daif_restore(DAIF_PROCCTX_NOIRQ);
+	ruan_probe(103);
 
 	/*
 	 * TTBR0 is only used for the identity mapping at this stage. Make it
@@ -337,6 +341,7 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 
 	xen_early_init();
 	efi_init();
+	ruan_probe(104);
 
 	if (!efi_enabled(EFI_BOOT) && ((u64)_text % MIN_KIMG_ALIGN) != 0)
 	     pr_warn(FW_BUG "Kernel image misaligned at boot, please fix your bootloader!");
@@ -345,6 +350,8 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 
 	paging_init();
 
+	ruan_probe(105);
+
 	acpi_table_upgrade();
 
 	/* Parse the ACPI tables for possible boot-time configuration */
@@ -352,8 +359,11 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 
 	if (acpi_disabled)
 		unflatten_device_tree();
+	ruan_probe(106);
 
 	bootmem_init();
+
+	ruan_probe(107);
 
 	kasan_init();
 
@@ -367,7 +377,10 @@ void __init __no_sanitize_address setup_arch(char **cmdline_p)
 		psci_acpi_init();
 
 	init_bootcpu_ops();
+
+	ruan_probe(108);
 	smp_init_cpus();
+	ruan_probe(109);
 	smp_build_mpidr_hash();
 
 	/* Init percpu seeds for random tags after cpus are set up. */
