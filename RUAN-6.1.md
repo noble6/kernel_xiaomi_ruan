@@ -33,8 +33,20 @@ Proven on the device (2026-10-10, debug builds):
   report has-slot for vendor_boot, so `fastboot flash vendor_boot` misses)
 - the kernel boots through all built-in initcalls and runs the ramdisk's
   init (ruan/dbgshell/init)
-- loading the modules then ends in a power off or watchdog reset ~29s
-  after boot; which one, and why, is open
+- the debug shell image (ruan/dbgshell, mkdbgshell.sh) loads its 81
+  modules with the APSS watchdog (qcom_soc_wdt) early and stays alive,
+  logo on, no reset; the USB serial gadget doesn't show up on the PC yet
+
+Careful: after a few failed boots ruan's bootloader marks slot A
+unbootable and boots slot B (the old stock HyperOS). Run
+`fastboot --set-active=a` before every test and check
+`fastboot getvar current-slot` afterwards; results from slot B boots
+are meaningless. Several tests on 2026-10-10 hit this.
+
+pstore: the stock recovery kernel (5.10.246 prebuilt) doesn't register
+ramoops; our 5.10.269 build didn't either when booted into recovery
+(caramel did in a full Android boot). Reading the 6.1 log through
+ramoops still needs a reader that registers it.
 
 ruan gives a bring-up almost no feedback: the panel backlight goes off
 when the kernel starts, pstore keeps nothing across reboots (mtdoops
@@ -43,7 +55,8 @@ reason and EDL entry is refused. Signals that work: PSCI SYSTEM_OFF
 (dark ~30s, then ruan powers back on) against a watchdog reset (~20s),
 see init/ruan_probe.c and the dbg_stage values in ruan/dbgshell/init.
 
-Next: a real log channel. Build the USB device stack (dwc3-msm, its
+Next: find out why the ACM gadget doesn't enumerate (UDC name, dwc3
+role, PHY/regulator probe), or a real log channel. Build the USB device stack (dwc3-msm, its
 PHYs, gcc/rpmh clocks, rpmh regulators, interconnect, SMMU, pinctrl,
 GDSCs) and the APSS watchdog (qcom_wdt_core + qcom_soc_wdt, which 6.1
 split out) into the kernel, and use the USB serial gadget as console
