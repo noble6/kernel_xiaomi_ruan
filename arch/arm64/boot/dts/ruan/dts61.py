@@ -173,6 +173,79 @@ def qup_wrappers(root):
     return f'{moved} serial engines moved under their wrappers'
 
 
+def rpmh_rsc(root):
+    """RPMh RSCs: one child node per DRV, the clients under it.
+
+    5.10: a flat "qcom,rpmh-rsc" node with qcom,drv-id, qcom,tcs-offset and
+    qcom,tcs-config, its clients (RPMh clocks, BCM voters, regulators) as
+    children.
+    6.1: qcom,drv-count on the RSC, a "drv" child per DRV with qcom,drv-id
+    and qcom,tcs-offset, a "channel" child of that with qcom,tcs-config,
+    and the clients under the drv node: they find their controller through
+    their parent. reg and interrupts stay indexed by DRV id.
+    """
+    n = 0
+    for rsc in list(root.walk()):
+        if 'qcom,rpmh-rsc' not in rsc.compatible() or rsc.prop('qcom,drv-count'):
+            continue
+        drv = Node('drv')
+        drv.props = [['qcom,drv-id', rsc.prop('qcom,drv-id')],
+                     ['qcom,tcs-offset', rsc.prop('qcom,tcs-offset')]]
+        channel = Node('channel')
+        channel.props = [['qcom,tcs-config', rsc.prop('qcom,tcs-config')]]
+        drv.add(channel)
+        # Neither the 5.10 nor the 6.1 driver uses the RSC's clocks; as a
+        # fw_devlink supplier (dispcc for disp_rsc) they only held the RSC,
+        # its BCM voter and every NoC voting through it back until the
+        # deferred probe timeout, after first stage init gave up on UFS.
+        for name in ('qcom,drv-id', 'qcom,tcs-offset', 'qcom,tcs-config', 'clocks'):
+            rsc.delete(name)
+        rsc.set('qcom,drv-count', f'<{len(strings(rsc.prop("reg-names")))}>')
+        clients = list(rsc.children)
+        rsc.add(drv)
+        for client in clients:
+            old = client.path()
+            rsc.remove(client)
+            drv.add(client)
+            MOVED[old] = client.path()
+        n += 1
+    return f'{n} RSCs converted'
+
+
+def icc_skip_qos(root):
+    """Bring-up: don't program NoC QoS.
+
+    Once RPMh works the parrot interconnect providers register and the
+    6.1 driver writes QoS registers on every NoC; the boot hangs right
+    there (no panic, watchdog reset). QoS is only priority tuning, so
+    skip it until the NoC clocks are sorted out.
+    """
+    n = 0
+    for node in root.walk():
+        if node.prop('#interconnect-cells') is not None and \
+                any(c.startswith('qcom,parrot-') for c in node.compatible()) and \
+                node.prop('qcom,skip-qos') is None:
+            node.set('qcom,skip-qos', None)
+            n += 1
+    return f'{n} NoCs'
+
+
+def smmu_tbus(root):
+    """QSMMUv500 TBUs: 6.1 requires qcom,iova-width.
+
+    5.10 defaulted to 36 bits (QCOM_IOVA_WIDTH_DEFAULT) when it was
+    missing, as in ruan's DT; 6.1 fails the TBU probe with -EINVAL and
+    the SMMU gives up ("TBU failed probe, QSMMUV500 cannot continue!"),
+    leaving UFS and every other IOMMU user deferred.
+    """
+    n = 0
+    for node in root.walk():
+        if 'qcom,qsmmuv500-tbu' in node.compatible() and node.prop('qcom,iova-width') is None:
+            node.set('qcom,iova-width', '<36>')
+            n += 1
+    return f'{n} TBUs'
+
+
 def node_paths(root):
     """Point __symbols__, aliases and chosen at the nodes' new paths.
 
@@ -260,6 +333,9 @@ def splash_console(root):
 
 CONVERSIONS = [
     qup_wrappers,
+    rpmh_rsc,
+    icc_skip_qos,
+    smmu_tbus,
     compatibles,
     node_paths,
     soc_ids,
