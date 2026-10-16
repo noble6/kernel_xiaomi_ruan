@@ -57,7 +57,13 @@ if 'qcom_soc_wdt.ko' in have:
     order = [m for m in order if m != 'qcom_soc_wdt.ko']
     i = order.index('qcom_wdt_core.ko') + 1 if 'qcom_wdt_core.ko' in order else 0
     order.insert(i, 'qcom_soc_wdt.ko')
-# smem, which the watchdog needs, waits for the hwspinlock
+# Crash reporting next: the minidump table (with the pstore zones and the
+# log buffer) and download mode, so a panic or watchdog bite later in
+# the boot is saved to the rawdump partition by the bootloader.
+early = [m for m in ('minidump.ko', 'qcom_logbuf_vendor_hooks.ko', 'memory_dump_v2.ko',
+                     'qcom-dload-mode.ko') if m in have]
+order = early + [m for m in order if m not in early]
+# smem, which the watchdog and minidump need, waits for the hwspinlock
 if 'qcom_hwspinlock.ko' in have:
     order = ['qcom_hwspinlock.ko'] + [m for m in order if m != 'qcom_hwspinlock.ko']
 order += [m for m in have if m not in order]
