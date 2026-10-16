@@ -71,8 +71,16 @@ unbootable and boots slot B (the old stock HyperOS). Run
 
 ## Next
 
-1. USB device mode (dwc3-msm, PHYs) for adb, so userspace can be
-   debugged live.
+1. USB device mode for adb, so userspace can be debugged live. Found so
+   far (2026-10-16): the HS PHY probes; dwc3-msm took the Type-C "port"
+   node as its dwc3 core and failed to find the PHY (fixed, finds the
+   snps,dwc3 child now); with that fixed it waits for a role source,
+   the EUD extcon (eud.ko loads but never registers it) and the Type-C
+   role switch fed by UCSI over pmic_glink, which needs the ADSP, and
+   nothing starts the ADSP on 6.1 (on 5.10 the audio techpack's
+   adsp_loader does). dwc3-msm.force_peripheral (on) skips both and
+   starts device mode: built, not flashed yet. The ruan dtbo overlay
+   re-adds extcon and usb-role-switch, so DT edits there don't stick.
 2. The techpack drivers, display first: msm_drm, kgsl, then audio,
    Wi-Fi, IPA/data, video, camera.
 3. Xiaomi modules without source (speaker amplifiers, hall sensor,
