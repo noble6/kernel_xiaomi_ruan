@@ -3034,14 +3034,20 @@ static int __qcom_multi_smc_init(struct qcom_scm *__scm,
 			return ret;
 		}
 
-		/* Detect Multi SMC support present or not */
-		ret = qcom_scm_query_wq_queue_info(__scm);
-		if (!ret)
+		/*
+		 * Detect Multi SMC support present or not. Older TrustZone
+		 * (ruan's, shipped with 5.10) doesn't know the call and fails it;
+		 * that only means no multi SMC: keep the single SMC mode the
+		 * query set up instead of failing the probe.
+		 */
+		if (!qcom_scm_query_wq_queue_info(__scm))
 			sema_init(&qcom_scm_sem_lock,
 					(int)__scm->waitq.call_ctx_cnt);
+		else
+			dev_info(__scm->dev, "no multi SMC support, using single SMC\n");
 	}
 
-	return ret;
+	return 0;
 }
 
 /**
@@ -3194,8 +3200,11 @@ static int qcom_scm_probe(struct platform_device *pdev)
 	__qcom_scm_init();
 	__get_convention();
 	ret  = __qcom_multi_smc_init(scm, pdev);
-	if (ret)
+	if (ret) {
+		/* Don't leave callers a pointer to the freed scm. */
+		__scm = NULL;
 		return ret;
+	}
 
 	scm->restart_nb.notifier_call = qcom_scm_do_restart;
 	scm->restart_nb.priority = 130;
