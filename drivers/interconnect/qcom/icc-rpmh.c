@@ -476,20 +476,27 @@ int qcom_icc_rpmh_probe(struct platform_device *pdev)
 		for (i = 0; i < qp->num_voters; i++) {
 			if (desc->voters[i] && !is_voter_disabled(desc->voters[i])) {
 				qp->voters[i] = of_bcm_voter_get(qp->dev, desc->voters[i]);
-				if (IS_ERR(qp->voters[i]))
+				if (IS_ERR(qp->voters[i])) {
+					dev_err(qp->dev, "bcm voter %s: %ld\n", desc->voters[i],
+						PTR_ERR(qp->voters[i]));
 					return PTR_ERR(qp->voters[i]);
+				}
 			}
 		}
 	}
 
 	qp->regmap = qcom_icc_rpmh_map(pdev, desc);
-	if (IS_ERR(qp->regmap))
+	if (IS_ERR(qp->regmap)) {
+		dev_err(qp->dev, "regmap: %ld\n", PTR_ERR(qp->regmap));
 		return PTR_ERR(qp->regmap);
+	}
 
 
 	qp->num_clks = devm_clk_bulk_get_all(qp->dev, &qp->clks);
-	if (qp->num_clks < 0)
+	if (qp->num_clks < 0) {
+		dev_err(qp->dev, "clocks: %d\n", qp->num_clks);
 		return qp->num_clks;
+	}
 
 	for (i = 0; i < qp->num_bcms; i++)
 		qcom_icc_bcm_init(qp, qp->bcms[i], dev);
