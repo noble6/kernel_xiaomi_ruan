@@ -5943,8 +5943,11 @@ static int dwc3_msm_core_init(struct dwc3_msm *mdwc)
 		}
 	}
 
-	/* Assumes dwc3 is the first DT child of dwc3-msm */
-	dwc3_node = of_get_next_available_child(node, NULL);
+	/*
+	 * The dwc3 core child. Not necessarily the first one: ruan's DT
+	 * has the Type-C "port" graph node before it.
+	 */
+	dwc3_node = of_get_compatible_child(node, "snps,dwc3");
 	if (!dwc3_node) {
 		dev_err(mdwc->dev, "failed to find dwc3 child\n");
 		ret = -ENODEV;
@@ -6075,16 +6078,16 @@ static int dwc3_msm_parse_core_params(struct dwc3_msm *mdwc, struct device_node 
 	phy_node = of_parse_phandle(dwc3_node, "usb-phy", 0);
 	mdwc->hs_phy = devm_usb_get_phy_by_node(mdwc->dev, phy_node, NULL);
 	if (IS_ERR(mdwc->hs_phy)) {
-		dev_err(mdwc->dev, "unable to get hsphy device\n");
 		ret = PTR_ERR(mdwc->hs_phy);
+		dev_err(mdwc->dev, "unable to get hsphy device: %d\n", ret);
 		return ret;
 	}
 
 	phy_node = of_parse_phandle(dwc3_node, "usb-phy", 1);
 	mdwc->ss_phy = devm_usb_get_phy_by_node(mdwc->dev, phy_node, NULL);
 	if (IS_ERR(mdwc->ss_phy)) {
-		dev_err(mdwc->dev, "unable to get ssphy device\n");
 		ret = PTR_ERR(mdwc->ss_phy);
+		dev_err(mdwc->dev, "unable to get ssphy device: %d\n", ret);
 		return ret;
 	}
 
@@ -6241,6 +6244,16 @@ static int dwc3_msm_parse_params(struct dwc3_msm *mdwc, struct device_node *node
 
 	return 0;
 }
+
+/*
+ * ruan 6.1 bring-up: the role sources (EUD extcon, the Type-C role switch
+ * fed by UCSI over pmic_glink, i.e. the ADSP) don't run yet, and the
+ * glue waits for them before it creates the dwc3 core. Ignore them and
+ * start in device mode, which is enough for adb. The ruan dtbo overlay
+ * adds extcon and usb-role-switch back, so this can't be done in the DT.
+ */
+static bool force_peripheral = true;
+module_param(force_peripheral, bool, 0444);
 
 static int dwc3_msm_probe(struct platform_device *pdev)
 {
@@ -6428,8 +6441,11 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		}
 	}
 
-	/* Assumes dwc3 is the first DT child of dwc3-msm */
-	dwc3_node = of_get_next_available_child(node, NULL);
+	/*
+	 * The dwc3 core child. Not necessarily the first one: ruan's DT
+	 * has the Type-C "port" graph node before it.
+	 */
+	dwc3_node = of_get_compatible_child(node, "snps,dwc3");
 	if (!dwc3_node) {
 		dev_err(&pdev->dev, "failed to find dwc3 child\n");
 		ret = -ENODEV;
@@ -6459,7 +6475,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	mutex_init(&mdwc->suspend_resume_mutex);
 	mutex_init(&mdwc->role_switch_mutex);
 
-	if (of_property_read_bool(node, "usb-role-switch")) {
+	if (!force_peripheral && of_property_read_bool(node, "usb-role-switch")) {
 		struct usb_role_switch_desc role_desc = {
 			.set = dwc3_msm_usb_role_switch_set_role,
 			.get = dwc3_msm_usb_role_switch_get_role,
@@ -6473,14 +6489,17 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 								&role_desc);
 		if (IS_ERR(mdwc->role_switch)) {
 			ret = PTR_ERR(mdwc->role_switch);
+			dev_err(mdwc->dev, "role switch: %d\n", ret);
 			goto put_dwc3;
 		}
 	}
 
-	if (of_property_read_bool(node, "extcon")) {
+	if (!force_peripheral && of_property_read_bool(node, "extcon")) {
 		ret = dwc3_msm_extcon_register(mdwc);
-		if (ret)
+		if (ret) {
+			dev_err(mdwc->dev, "extcon: %d\n", ret);
 			goto put_dwc3;
+		}
 
 		/*
 		 * dpdm regulator will be turned on to perform apsd
