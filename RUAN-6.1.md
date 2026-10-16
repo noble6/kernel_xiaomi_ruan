@@ -1,7 +1,8 @@
 # Linux 6.1 for ruan (experimental)
 
-**Not bootable yet.** The release kernel for the Redmi Pad Pro 5G / POCO
-Pad 5G (ruan) is 5.10 on the `axion` branch.
+**Boots to Android userspace, no display or USB yet.** The release
+kernel for the Redmi Pad Pro 5G / POCO Pad 5G (ruan) is 5.10 on the
+`axion` branch.
 
 This branch ports ruan (Snapdragon 7s Gen 2, parrot) to Linux 6.1 GKI
 (android14-6.1). Qualcomm never released parrot on a kernel newer than
@@ -27,45 +28,52 @@ load on 6.1.
 
 ## Status
 
-Proven on the device (2026-10-10, debug builds):
-- the bootloader accepts our boot.img + vendor_boot.img and picks our dtb
-  (flash `boot_a` / `vendor_boot_a` explicitly: ruan's bootloader doesn't
-  report has-slot for vendor_boot, so `fastboot flash vendor_boot` misses)
-- the kernel boots through all built-in initcalls and runs the ramdisk's
-  init (ruan/dbgshell/init)
-- the debug shell image (ruan/dbgshell, mkdbgshell.sh) loads its 81
-  modules with the APSS watchdog (qcom_soc_wdt) early and stays alive,
-  logo on, no reset; the USB serial gadget doesn't show up on the PC yet
+2026-10-16, ruan/mkimg61.sh images (all 285 modules in the vendor
+ramdisk) on slot A: UFS comes up at 0.6 s, first stage init mounts the
+partitions, SELinux goes enforcing and second stage init starts the
+Android services (apexd, logd, ...). It then stays on the boot logo:
+there is no 6.1 display driver yet (the Qualcomm techpack drivers aren't
+built), and USB device mode doesn't work, so there's no adb.
+
+What it took, each found from a crash log (see Logs below):
+- qcom_scm: ruan's TrustZone doesn't know the multi SMC wait queue
+  query; fall back to single SMC instead of failing the probe (that left
+  a dangling __scm and msm_sharedmem crashed on it)
+- DT (dts61.py): RPMh RSCs in the 6.1 layout (drv/channel children, the
+  clients under drv), no clocks on the RSCs (they only held the display
+  RSC and every NoC voting through it back until the deferred probe
+  timeout, after first stage init gave up on UFS), qcom,skip-qos on the
+  NoCs, qcom,iova-width on the SMMU TBUs (5.10 defaulted to 36, 6.1
+  fails the TBU and with it the SMMU)
+- mkimg61.sh loads minidump, the log buffer hooks and download mode
+  right after the hwspinlock, so later crashes are saved
+
+Still failing, harmless so far: PMIC SID 6 transaction (pmic-spmi 0-06),
+the mnoc_hf_0 TBU (display path), several thermal and temp-alarm zones.
+
+## Logs
+
+pstore stays empty on ruan: the bootloader clears the ramoops memory on
+every reboot, warm or cold. After a panic or a watchdog bite it saves a
+Qualcomm minidump to the rawdump partition instead, with the kernel log;
+a Power + Volume Down reset saves one as well (handy when the boot hangs).
+Only the last dump is kept, so after a failed 6.1 boot:
+1. get to fastboot holding only Volume Down when the screen goes dark
+   (Power + Volume Down makes a new dump of the boot you interrupt)
+2. flash the 5.10 boot_a / vendor_boot_a back, `fastboot --set-active=a`
+3. boot 5.10 (with root) and run device_xiaomi_ruan's
+   tools/ruan_lastlog.py: panic-kmsg.txt is the 6.1 kernel log
 
 Careful: after a few failed boots ruan's bootloader marks slot A
 unbootable and boots slot B (the old stock HyperOS). Run
-`fastboot --set-active=a` before every test and check
-`fastboot getvar current-slot` afterwards; results from slot B boots
-are meaningless. Several tests on 2026-10-10 hit this.
+`fastboot --set-active=a` before every test. Flash `boot_a` /
+`vendor_boot_a` explicitly: `fastboot flash vendor_boot` misses.
 
-pstore: the stock recovery kernel (5.10.246 prebuilt) doesn't register
-ramoops; our 5.10.269 build didn't either when booted into recovery
-(caramel did in a full Android boot). Reading the 6.1 log through
-ramoops still needs a reader that registers it.
+## Next
 
-ruan gives a bring-up almost no feedback: the panel backlight goes off
-when the kernel starts, pstore keeps nothing across reboots (mtdoops
-shares the ramoops region), the bootloader ignores the IMEM restart
-reason and EDL entry is refused. Signals that work: PSCI SYSTEM_OFF
-(dark ~30s, then ruan powers back on) against a watchdog reset (~20s),
-see init/ruan_probe.c and the dbg_stage values in ruan/dbgshell/init.
-
-Next: find out why the ACM gadget doesn't enumerate (UDC name, dwc3
-role, PHY/regulator probe), or a real log channel. Build the USB device stack (dwc3-msm, its
-PHYs, gcc/rpmh clocks, rpmh regulators, interconnect, SMMU, pinctrl,
-GDSCs) and the APSS watchdog (qcom_wdt_core + qcom_soc_wdt, which 6.1
-split out) into the kernel, and use the USB serial gadget as console
-(console=ttyGS0), so the kernel streams its log to the PC from early
-boot.
-
-To do after that, roughly in this order:
-1. The module that powers off / the watchdog.
-2. Boot to Android: display, touch, charger, Wi-Fi, audio, IPA/data,
-   video, camera (out-of-tree Qualcomm modules).
+1. USB device mode (dwc3-msm, PHYs) for adb, so userspace can be
+   debugged live.
+2. The techpack drivers, display first: msm_drm, kgsl, then audio,
+   Wi-Fi, IPA/data, video, camera.
 3. Xiaomi modules without source (speaker amplifiers, hall sensor,
    millet, mi_memory and others): replace or drop.
