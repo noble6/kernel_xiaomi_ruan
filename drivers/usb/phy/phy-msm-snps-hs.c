@@ -1006,8 +1006,10 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	}
 
 	phy->phy_reset = devm_reset_control_get(dev, "phy_reset");
-	if (IS_ERR(phy->phy_reset))
+	if (IS_ERR(phy->phy_reset)) {
+		dev_err(dev, "ruan: phy_reset: %ld\n", PTR_ERR(phy->phy_reset));
 		return PTR_ERR(phy->phy_reset);
+	}
 
 	phy->param_override_seq_cnt = of_property_count_elems_of_size(
 					dev->of_node,
@@ -1052,8 +1054,10 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		dev_err(dev, "error reading qcom,refgen-voltage-level property\n");
 
 	ret = usb2_get_regulators(phy);
-	if (ret)
+	if (ret) {
+		dev_err(dev, "ruan: regulators: %d\n", ret);
 		return ret;
+	}
 
 	mutex_init(&phy->phy_lock);
 	platform_set_drvdata(pdev, phy);
@@ -1066,11 +1070,14 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	phy->phy.type			= USB_PHY_TYPE_USB2;
 
 	ret = usb_add_phy_dev(&phy->phy);
-	if (ret)
+	if (ret) {
+		dev_err(dev, "ruan: usb_add_phy_dev: %d\n", ret);
 		return ret;
+	}
 
 	ret = msm_hsphy_regulator_init(phy);
 	if (ret) {
+		dev_err(dev, "ruan: dpdm regulator: %d\n", ret);
 		usb_remove_phy(&phy->phy);
 		return ret;
 	}
