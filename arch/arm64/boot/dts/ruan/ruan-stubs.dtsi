@@ -1,22 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Labels that ruan's dtbo overlay points at but that come from
- * Qualcomm's audio, camera and NFC device trees, which this
+ * Qualcomm's camera and NFC device trees, which this
  * kernel does not build yet. The bootloader refuses an overlay with an unresolved
  * label, so give each one an empty, disabled node to land on.
  */
 
 / {
 	ruan-overlay-stubs {
-		adsp_loader: adsp-loader { status = "disabled"; };
-		va_cdc_dma_0_tx: va-cdc-dma-0-tx { status = "disabled"; };
-		audio_gpr: audio-gpr { status = "disabled"; };
-		stub_codec: stub-codec { status = "disabled"; };
-		spf_core_platform: spf-core-platform { status = "disabled"; };
-		lpass_core_hw_vote: lpass-core-hw-vote { status = "disabled"; };
-		lpass_audio_hw_vote: lpass-audio-hw-vote { status = "disabled"; };
-		lpass_cdc: lpass-cdc { status = "disabled"; };
-		lpi_tlmm: lpi-tlmm { status = "disabled"; };
 		nfc_int_active: nfc-int-active { };
 		nfc_enable_active: nfc-enable-active { };
 		nfc_int_suspend: nfc-int-suspend { };
