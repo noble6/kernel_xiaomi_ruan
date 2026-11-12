@@ -9323,7 +9323,6 @@ void sde_crtc_update_cont_splash_settings(struct drm_crtc *crtc)
 	rate = sde_power_clk_get_rate(&priv->phandle, kms->perf.clk_name);
 	sde_crtc->cur_perf.core_clk_rate = (rate > 0) ?
 					rate : kms->perf.max_core_clk_rate;
-	sde_crtc->cur_perf.core_clk_rate = kms->perf.max_core_clk_rate;
 }
 
 static void sde_crtc_install_noise_layer_properties(struct sde_crtc *sde_crtc,
