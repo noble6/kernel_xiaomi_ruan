@@ -19,6 +19,7 @@
 
 #include "../../../kernel/printk/printk_ringbuffer.h"
 #include "debug_symbol.h"
+#include <linux/workqueue.h>
 
 void register_log_minidump(struct printk_ringbuffer *prb)
 {
@@ -64,18 +65,35 @@ void register_log_minidump(struct printk_ringbuffer *prb)
 		pr_err("Failed to add log_info entry in minidump table\n");
 }
 
-static int __init logbuf_vh_driver_init(void)
-{
-	struct printk_ringbuffer *prb = NULL;
+/*
+ * Built in, this runs before debug_kinfo has filled in the symbol table
+ * and before minidump is up (it probes late). Keep trying for a while
+ * instead of giving up, so the kernel log still ends up in the minidump.
+ */
+#define LOGBUF_VH_TRIES	300	/* 30 s */
 
-	if (!debug_symbol_available()) {
-		pr_err("debug symbol driver is not available\n");
-		return -ENODEV;
+static void logbuf_vh_register_fn(struct work_struct *work);
+static DECLARE_DELAYED_WORK(logbuf_vh_work, logbuf_vh_register_fn);
+
+static void logbuf_vh_register_fn(struct work_struct *work)
+{
+	static int tries;
+
+	if (!debug_symbol_available() || !msm_minidump_enabled()) {
+		if (++tries < LOGBUF_VH_TRIES)
+			schedule_delayed_work(&logbuf_vh_work, HZ / 10);
+		else
+			pr_err("debug symbol driver is not available\n");
+		return;
 	}
 
-	prb = *(struct printk_ringbuffer **)DEBUG_SYMBOL_LOOKUP(prb);
-	register_log_minidump(prb);
+	register_log_minidump(*(struct printk_ringbuffer **)DEBUG_SYMBOL_LOOKUP(prb));
+	pr_info("kernel log added to minidump\n");
+}
 
+static int __init logbuf_vh_driver_init(void)
+{
+	schedule_delayed_work(&logbuf_vh_work, 0);
 	return 0;
 }
 
