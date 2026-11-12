@@ -169,6 +169,14 @@ config PHY_QCOM_UFS_V4_SUN
 	  This is required to enable UFS on Sun chipset.
 	  To compile this driver as a module, choose M here.
 
+config PHY_QCOM_UFS_V4_PARROT
+	tristate "Qualcomm Technologies, Inc. UFS V4 PARROT"
+	depends on PHY_QCOM_UFS
+	help
+	  UFS phy on QCOM Parrot (SM7435) chipsets, with the calibration
+	  table from the 5.10 Parrot release. Device trees written for 5.10
+	  ask for it by the "qcom,ufs-phy-qmp-v4-parrot" compatible.
+
 config PHY_QCOM_UFS_V4_WAIPIO
 	tristate "Qualcomm Technologies, Inc. UFS V4 WAIPIO"
 	depends on PHY_QCOM_UFS
