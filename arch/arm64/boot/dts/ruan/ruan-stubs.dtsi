@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Labels that ruan's stock dtbo overlay points at but that come from
- * Qualcomm's display, audio and NFC device trees, which this kernel does
- * not build yet. The bootloader refuses an overlay with an unresolved
+ * Labels that ruan's dtbo overlay points at but that come from
+ * Qualcomm's display, audio, camera and NFC device trees, which this
+ * kernel does not build yet. The bootloader refuses an overlay with an unresolved
  * label, so give each one an empty, disabled node to land on.
  */
 
@@ -28,5 +28,14 @@
 		nfc_enable_active: nfc-enable-active { };
 		nfc_int_suspend: nfc-int-suspend { };
 		nfc_enable_suspend: nfc-enable-suspend { };
+		cam_cci0: cam-cci0 { status = "disabled"; };
+		cam_sensor_mclk0_active: cam-sensor-mclk0-active { };
+		cam_sensor_mclk0_suspend: cam-sensor-mclk0-suspend { };
+		cam_sensor_mclk1_active: cam-sensor-mclk1-active { };
+		cam_sensor_mclk1_suspend: cam-sensor-mclk1-suspend { };
+		cam_sensor_active_rst0: cam-sensor-active-rst0 { };
+		cam_sensor_suspend_rst0: cam-sensor-suspend-rst0 { };
+		cam_sensor_active_rst1: cam-sensor-active-rst1 { };
+		cam_sensor_suspend_rst1: cam-sensor-suspend-rst1 { };
 	};
 };

@@ -12,6 +12,7 @@
 /dts-v1/;
 
 #include "parrot.dtsi"
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 #include "ruan-stubs.dtsi"
 
 / {
@@ -35,4 +36,26 @@
 	/delete-property/ alloc-ranges;
 	/delete-property/ size;
 	reg = <0x0 0x80d00000 0x0 0x200000>;
+};
+
+/* ruan's base has pm6450 L15, the camera sensors' digital supply */
+&apps_rsc_drv2 {
+	rpmh-regulator-ldob15 {
+		compatible = "qcom,rpmh-vrm-regulator";
+		qcom,resource-name = "ldob15";
+		qcom,regulator-type = "pmic5-ldo";
+		qcom,supported-modes =
+			<RPMH_REGULATOR_MODE_LPM
+			RPMH_REGULATOR_MODE_HPM>;
+		qcom,mode-threshold-currents = <0 30000>;
+		L15B:
+		pm6450_l15: regulator-pm6450-l15 {
+			regulator-name = "pm6450_l15";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+			regulator-min-microvolt = <1080000>;
+			regulator-max-microvolt = <1304000>;
+			qcom,init-voltage = <1200000>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
 };
