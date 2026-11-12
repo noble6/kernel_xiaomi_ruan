@@ -610,11 +610,16 @@ static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 		dev_err(uphy->dev, "Failed the main PHY configuration\n");
 		goto fail;
 	}
-	/*usb3 phy eye diag configuration*/
-	if (uphy->flags & PHY_HOST_MODE)
+	/*
+	 * usb3 phy eye diag configuration. Xiaomi's tuning tables are
+	 * optional: boards without them (ruan) keep the main sequence.
+	 */
+	if ((uphy->flags & PHY_HOST_MODE) && host_usb3_phy_eye_reg)
 		ret = configure_usb3_phy_eye_regs(uphy, host_usb3_phy_eye_reg, phy->host_usb3_phy_eye_seq_len);
+	else if (!(uphy->flags & PHY_HOST_MODE) && usb3_phy_eye_reg)
+		ret = configure_usb3_phy_eye_regs(uphy, usb3_phy_eye_reg, phy->usb3_phy_eye_seq_len);
 	else
-		ret = configure_usb3_phy_eye_regs(uphy, usb3_phy_eye_reg, phy->usb3_phy_eye_seq_len);	
+		ret = 0;
 	if (ret) {
 		dev_err(uphy->dev, "Failed the usb3 PHY eye diag configuration\n");
 		goto fail;
