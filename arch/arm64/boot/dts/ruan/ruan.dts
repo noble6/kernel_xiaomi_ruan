@@ -91,3 +91,8 @@
 		};
 	};
 };
+
+/* ruan's trustzone needs the HWKM transport key set up from HLOS */
+&ufshc_mem {
+	qcom,ice-hwkm-tpkey;
+};

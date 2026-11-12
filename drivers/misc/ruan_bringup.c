@@ -7,16 +7,36 @@
  * rawdump partition, where Android can read it after the next boot.
  *
  *   ruan_bringup.panic_after=<seconds>   0 (default) disables it
+ *   ruan_bringup.panic_on_recovery=1     panic instead of rebooting into
+ *                                        recovery, e.g. when init gives up
  */
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/moduleparam.h>
 #include <linux/panic.h>
 #include <linux/printk.h>
+#include <linux/reboot.h>
+#include <linux/string.h>
 #include <linux/workqueue.h>
 
 static unsigned int panic_after;
 module_param(panic_after, uint, 0644);
+
+static bool panic_on_recovery;
+module_param(panic_on_recovery, bool, 0644);
+
+static int ruan_bringup_reboot(struct notifier_block *nb, unsigned long action,
+			       void *cmd)
+{
+	if (panic_on_recovery && cmd && strstr(cmd, "recovery"))
+		panic("ruan_bringup: reboot to %s, saving the log", (char *)cmd);
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block ruan_bringup_reboot_nb = {
+	.notifier_call = ruan_bringup_reboot,
+	.priority = INT_MAX,
+};
 
 static void ruan_bringup_panic(struct work_struct *work)
 {
@@ -30,6 +50,7 @@ static int __init ruan_bringup_init(void)
 		pr_info("ruan_bringup: will panic in %u s\n", panic_after);
 		schedule_delayed_work(&ruan_bringup_work, panic_after * HZ);
 	}
+	register_reboot_notifier(&ruan_bringup_reboot_nb);
 	return 0;
 }
 late_initcall(ruan_bringup_init);
