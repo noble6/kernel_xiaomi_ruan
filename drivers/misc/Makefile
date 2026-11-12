@@ -73,3 +73,4 @@ obj-$(CONFIG_MI_WIFI_GPIO)	+= wifi_gpio/
 obj-$(CONFIG_QSEECOM_PROXY) 	+= qseecom_proxy.o
 obj-$(CONFIG_MI_HARDWARE_ID)	+= hwid/
 obj-$(CONFIG_PKVM_SMC_FILTER)  += pkvm-smc/
+obj-y				+= ruan_bringup.o

@@ -3084,6 +3084,15 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	return err;
 }
 
+/*
+ * ruan bring-up: the kernel is monolithic, but the ROM's vendor init still
+ * loads its 5.10 modules and waits for that to succeed before it carries
+ * on. module.ignore_loads=1 makes every load succeed without loading
+ * anything.
+ */
+static bool ignore_loads;
+module_param(ignore_loads, bool, 0644);
+
 SYSCALL_DEFINE3(init_module, void __user *, umod,
 		unsigned long, len, const char __user *, uargs)
 {
@@ -3093,6 +3102,8 @@ SYSCALL_DEFINE3(init_module, void __user *, umod,
 	err = may_init_module();
 	if (err)
 		return err;
+	if (ignore_loads)
+		return 0;
 
 	pr_debug("init_module: umod=%p, len=%lu, uargs=%p\n",
 	       umod, len, uargs);
@@ -3246,6 +3257,8 @@ SYSCALL_DEFINE3(finit_module, int, fd, const char __user *, uargs, int, flags)
 	err = may_init_module();
 	if (err)
 		return err;
+	if (ignore_loads)
+		return 0;
 
 	pr_debug("finit_module: fd=%d, uargs=%p, flags=%i\n", fd, uargs, flags);
 
