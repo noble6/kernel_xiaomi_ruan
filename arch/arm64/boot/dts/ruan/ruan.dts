@@ -59,3 +59,35 @@
 		};
 	};
 };
+
+/*
+ * Android's first stage init reads this to know which partitions to
+ * create before mounting: without the vbmeta list it never makes
+ * vbmeta and boot, AVB can't verify /system and init gives up. Same as
+ * the 5.10 base.
+ */
+/ {
+	firmware {
+		android {
+			compatible = "android,firmware";
+
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+			};
+
+			fstab {
+				compatible = "android,fstab";
+
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait,slotselect,avb";
+					status = "ok";
+				};
+			};
+		};
+	};
+};
