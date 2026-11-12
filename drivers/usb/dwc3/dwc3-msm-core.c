@@ -6659,7 +6659,12 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		if(platform_id == Platform_Num_Dis_Wcd_Array[j])
 			break;
 
-	if(j == (sizeof(Platform_Num_Dis_Wcd_Array)/sizeof(Platform_Num_Dis_Wcd_Array[0]))) {
+	/*
+	 * Only wait for the WCD USB switch on boards that have one: ruan
+	 * has none, and Xiaomi's board list doesn't know it either.
+	 */
+	if (mdwc->wcd_usbss &&
+	    j == (sizeof(Platform_Num_Dis_Wcd_Array)/sizeof(Platform_Num_Dis_Wcd_Array[0]))) {
 			ret = dwc3_msm_get_wcd_info(mdwc, node);
 			if (ret) {
 				ret = -EPROBE_DEFER;
