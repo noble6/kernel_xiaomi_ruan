@@ -4985,6 +4985,30 @@ static int _sde_set_possible_cpu_mask(unsigned long qos_mask)
 	return qos_mask;
 }
 
+/*
+ * Newer device trees give qcom,sde-max-bw-{low,high}-kbps as
+ * (ddr type, kbps) pairs. Read as a single u32 that is the ddr type
+ * (e.g. 8), which made the display vote 8 kbps and underrun every
+ * frame on parrot. Take the pair for this DDR type, else the first.
+ */
+static void _sde_perf_parse_dt_max_bw_pairs(struct device_node *np,
+		const char *name, u32 *out)
+{
+	u32 vals[16];
+	int n, i;
+
+	n = of_property_count_u32_elems(np, name);
+	if (n < 2 || n % 2 || n > ARRAY_SIZE(vals))
+		return;
+	if (of_property_read_u32_array(np, name, vals, n))
+		return;
+
+	*out = vals[1];
+	for (i = 0; i < n; i += 2)
+		if (!vals[i] || vals[i] == of_fdt_get_ddrtype())
+			*out = vals[i + 1];
+}
+
 static int _sde_perf_parse_dt_cfg(struct device_node *np,
 	struct sde_mdss_cfg *cfg, int *prop_count,
 	struct sde_prop_value *prop_value, bool *prop_exists)
@@ -5013,6 +5037,10 @@ static int _sde_perf_parse_dt_cfg(struct device_node *np,
 
 	_sde_perf_parse_dt_cfg_populate(cfg, prop_count, prop_value,
 			prop_exists);
+	_sde_perf_parse_dt_max_bw_pairs(np, "qcom,sde-max-bw-low-kbps",
+			&cfg->perf.max_bw_low);
+	_sde_perf_parse_dt_max_bw_pairs(np, "qcom,sde-max-bw-high-kbps",
+			&cfg->perf.max_bw_high);
 
 	if (prop_exists[PERF_CDP_SETTING]) {
 		const u32 prop_size = 2;

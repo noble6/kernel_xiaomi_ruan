@@ -125,6 +125,15 @@ static struct sde_hw_merge_3d *_sde_pp_merge_3d_init(enum sde_merge_3d idx,
 		return ERR_PTR(-EINVAL);
 	}
 
+	/*
+	 * 0x0f0f marks a block the chip doesn't have (parrot has no
+	 * merge_3d_0), as for dummy mixers. Writing to it faults.
+	 */
+	if (cfg->base == 0x0f0f) {
+		kfree(c);
+		return NULL;
+	}
+
 	c->idx = idx;
 	c->caps = cfg;
 	_setup_merge_3d_ops(&c->ops, c->caps);
