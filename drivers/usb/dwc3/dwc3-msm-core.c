@@ -6063,8 +6063,11 @@ static int dwc3_msm_core_init(struct dwc3_msm *mdwc)
 		}
 	}
 
-	/* Assumes dwc3 is the first DT child of dwc3-msm */
-	dwc3_node = of_get_next_available_child(node, NULL);
+	/*
+	 * The dwc3 core child. Not necessarily the first one: ruan's dtbo
+	 * adds the Type-C "port" graph node in front of it.
+	 */
+	dwc3_node = of_get_compatible_child(node, "snps,dwc3");
 	if (!dwc3_node) {
 		dev_err(mdwc->dev, "failed to find dwc3 child\n");
 		ret = -ENODEV;
@@ -6364,13 +6367,24 @@ static int dwc3_msm_register_interrupts(struct platform_device *pdev)
 	return ret;
 }
 
+/*
+ * ruan bring-up: the role sources (the EUD extcon and the Type-C role
+ * switch that UCSI drives over pmic_glink, i.e. once the ADSP runs) are
+ * not up yet, and the glue waits for them before it starts the dwc3
+ * core. Ignore them and start in device mode, which is enough for adb.
+ * ruan's dtbo adds extcon and usb-role-switch back, so this can't be done
+ * in the device tree. dwc3_msm.force_peripheral=0 turns it off.
+ */
+static bool force_peripheral = true;
+module_param(force_peripheral, bool, 0444);
+
 static int dwc3_msm_check_extcon_prop(struct platform_device *pdev)
 {
 	struct dwc3_msm	*mdwc = platform_get_drvdata(pdev);
 	struct device_node *node = mdwc->dev->of_node;
 	int ret = 0;
 
-	if (of_property_read_bool(node, "extcon")) {
+	if (!force_peripheral && of_property_read_bool(node, "extcon")) {
 		ret = dwc3_msm_extcon_register(mdwc);
 		if (ret)
 			return ret;
@@ -6658,8 +6672,11 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	}
 	else
 		pr_info("platform_id = %d,wcd disbale\n",platform_id);
-	/* Assumes dwc3 is the first DT child of dwc3-msm */
-	dwc3_node = of_get_next_available_child(node, NULL);
+	/*
+	 * The dwc3 core child. Not necessarily the first one: ruan's dtbo
+	 * adds the Type-C "port" graph node in front of it.
+	 */
+	dwc3_node = of_get_compatible_child(node, "snps,dwc3");
 	if (!dwc3_node) {
 		dev_err(&pdev->dev, "failed to find dwc3 child\n");
 		ret = -ENODEV;
@@ -6691,7 +6708,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	mutex_init(&mdwc->suspend_resume_mutex);
 	mutex_init(&mdwc->role_switch_mutex);
 
-	if (of_property_read_bool(node, "usb-role-switch")) {
+	if (!force_peripheral && of_property_read_bool(node, "usb-role-switch")) {
 		struct usb_role_switch_desc role_desc = {
 			.set = dwc3_msm_usb_role_switch_set_role,
 			.get = dwc3_msm_usb_role_switch_get_role,
