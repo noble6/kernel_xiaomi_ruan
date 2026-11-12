@@ -97,3 +97,8 @@
 &ufshc_mem {
 	qcom,ice-hwkm-tpkey;
 };
+
+/* DisplayPort over Type-C needs the ADSP's alt mode; not brought up yet */
+&sde_dp {
+	status = "disabled";
+};

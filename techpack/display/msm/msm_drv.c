@@ -2141,6 +2141,16 @@ static int add_display_components(struct device *dev,
 			if (!node)
 				break;
 
+			/*
+			 * A disabled connector never shows up as a component
+			 * and would hold the whole display back. ruan's dtbo
+			 * lists DP, which isn't brought up yet.
+			 */
+			if (!of_device_is_available(node)) {
+				of_node_put(node);
+				continue;
+			}
+
 			component_match_add(dev, matchptr, compare_of, node);
 		}
 
