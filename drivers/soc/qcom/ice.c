@@ -64,6 +64,11 @@
 
 #define QCOM_ICE_LUT_KEYS_CRYPTOCFG_OFFSET	0x80
 
+#define QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL		0x101C
+#define QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_STATUS	0x1020
+#define QCOM_ICE_HWKM_TPKEY_EN				BIT(8)
+#define QCOM_ICE_HWKM_TPKEY_RECEIVE_VAL			0x18C
+
 #define QCOM_ICE_HWKM_REG_OFFSET	0x8000
 #define HWKM_OFFSET(reg)		((reg) + QCOM_ICE_HWKM_REG_OFFSET)
 
@@ -83,6 +88,8 @@ struct qcom_ice {
 	bool use_hwkm;
 	bool hwkm_init_complete;
 	bool handle_clks;
+	bool hwkm_tpkey;
+	bool hwkm_tpkey_done;
 };
 
 union crypto_cfg {
@@ -337,6 +344,51 @@ static int translate_hwkm_slot(struct qcom_ice *ice, int slot)
 }
 
 #if IS_ENABLED(CONFIG_SCSI_UFS_CRYPTO_QTI) || IS_ENABLED(CONFIG_MMC_CRYPTO_QTI)
+#if IS_ENABLED(CONFIG_MSM_TMECOM_QMP)
+#include <linux/tme_hwkm_master.h>
+
+/*
+ * Older trustzone (ruan's, from the 5.10 release) can only unwrap a key
+ * into an ICE slot after HLOS has had TME broadcast the transport key to
+ * the ICE HWKM slave, with the slave in receive mode. Newer trustzone
+ * does this itself. Done once, before the first wrapped key, as the 5.10
+ * crypto-qti-hwkm driver did. Asked for with qcom,ice-hwkm-tpkey.
+ */
+static int qcom_ice_hwkm_set_tpkey(struct qcom_ice *ice)
+{
+	struct tme_ext_err_info errinfo = {0};
+	u32 val;
+	int err, tries = 0;
+
+	val = qcom_ice_readl(ice, HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+	qcom_ice_writel(ice, val & ~QCOM_ICE_HWKM_TPKEY_EN,
+			HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+	qcom_ice_writel(ice, QCOM_ICE_HWKM_TPKEY_RECEIVE_VAL,
+			HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+
+	do {
+		err = tme_hwkm_master_broadcast_transportkey(&errinfo);
+		if (err != -ENODEV && err != -EAGAIN)
+			break;
+		usleep_range(8000, 12000);
+	} while (++tries < 500);
+
+	dev_info(ice->dev, "HWKM transport key: %d, status 0x%x, tme %u seq %u\n",
+		 err, qcom_ice_readl(ice, HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_STATUS)),
+		 errinfo.tme_err_status, errinfo.seq_err_status);
+
+	val = qcom_ice_readl(ice, HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+	qcom_ice_writel(ice, val & ~QCOM_ICE_HWKM_TPKEY_EN,
+			HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+	return err;
+}
+#else
+static int qcom_ice_hwkm_set_tpkey(struct qcom_ice *ice)
+{
+	return -EOPNOTSUPP;
+}
+#endif
+
 static int qcom_ice_program_wrapped_key(struct qcom_ice *ice,
 					const struct blk_crypto_key *key,
 					u8 data_unit_size, int slot)
@@ -345,6 +397,13 @@ static int qcom_ice_program_wrapped_key(struct qcom_ice *ice,
 	int err;
 	union crypto_cfg cfg;
 	struct qtee_shm shm;
+
+	if (ice->hwkm_tpkey && !ice->hwkm_tpkey_done) {
+		err = qcom_ice_hwkm_set_tpkey(ice);
+		if (err)
+			return err;
+		ice->hwkm_tpkey_done = true;
+	}
 
 	hwkm_slot = translate_hwkm_slot(ice, slot);
 
@@ -569,6 +628,8 @@ static struct qcom_ice *qcom_ice_create(struct device *dev,
 
 	engine->use_hwkm = of_property_read_bool(dev->of_node,
 						 "qcom,ice-use-hwkm");
+	engine->hwkm_tpkey = of_property_read_bool(dev->of_node,
+						   "qcom,ice-hwkm-tpkey");
 
 	if (!qcom_ice_check_supported(engine))
 		return ERR_PTR(-EOPNOTSUPP);
