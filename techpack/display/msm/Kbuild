@@ -311,7 +311,8 @@ msm_drm-$(CONFIG_DRM_MSM) += mi_disp/mi_disp_core.o \
 			     mi_disp/mi_dsi_panel.o \
 			     mi_disp/mi_sde_encoder.o \
 			     mi_disp/mi_sde_connector.o \
-			     mi_disp/mi_backlight_ktz8866.o
+			     mi_disp/mi_backlight_ktz8866.o \
+			     mi_disp/mi_backlight_sy7758.o
 
 # Xiaomi did not publish mi_sde_crtc.c or the Novatek vis_display driver.
 

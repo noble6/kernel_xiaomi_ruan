@@ -33,6 +33,7 @@
 #include "mi_panel_id.h"
 #include "mi_disp_lhbm.h"
 #include "mi_backlight_ktz8866.h"
+#include "mi_backlight_sy7758.h"
 #endif
 
 #ifdef CONFIG_VIS_DISPLAY
@@ -939,6 +940,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 				panel_insert_black_enable = false;
 				DSI_INFO("disable insert black , esd on and cabc dimming after none zero backlight\n");
 			}
+		} else if (sy7758_present()) {
+			/* ruan: SY7758 (or SGM37604A) backlight over I2C */
+			sy7758_set_panel_name(panel->name);
+			rc = sy7758_backlight_update_status(bl_lvl);
 		}
 		break;
 	case DSI_BACKLIGHT_PWM:

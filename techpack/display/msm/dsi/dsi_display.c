@@ -38,6 +38,7 @@
 #include "mi_dsi_panel.h"
 #include "mi_disp_lhbm.h"
 #include "mi_backlight_ktz8866.h"
+#include "mi_backlight_sy7758.h"
 #endif
 
 #ifdef CONFIG_VIS_DISPLAY
@@ -10516,6 +10517,7 @@ void __init dsi_display_register(void)
 {
 #ifdef MI_DISPLAY_MODIFY
 	mi_backlight_ktz8866_init();
+	mi_backlight_sy7758_init();
 	mi_disp_feature_init();
 #endif
 	dsi_phy_drv_register();
