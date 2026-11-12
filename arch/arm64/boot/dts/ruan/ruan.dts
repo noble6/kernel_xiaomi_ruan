@@ -14,6 +14,10 @@
 #include "parrot.dtsi"
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 #include "parrot-sde.dtsi"
+#include <dt-bindings/clock/qcom,aop-qmp.h>
+#include <dt-bindings/clock/qcom,gpucc-parrot.h>
+#include "parrot-gpu.dtsi"
+#include "parrot-gpu-pwrlevels.dtsi"
 #include "ruan-stubs.dtsi"
 
 / {
