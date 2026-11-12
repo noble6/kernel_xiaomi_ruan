@@ -2171,6 +2171,9 @@ static int dsi_panel_parse_dyn_clk_caps(struct dsi_panel *panel)
 	return 0;
 }
 
+static bool dfps_max_only = true;
+module_param(dfps_max_only, bool, 0444);
+
 static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -2245,6 +2248,21 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 			dfps_caps->min_refresh_rate = dfps_caps->dfps_list[i];
 		else if (dfps_caps->dfps_list[i] > dfps_caps->max_refresh_rate)
 			dfps_caps->max_refresh_rate = dfps_caps->dfps_list[i];
+	}
+
+	/*
+	 * ruan bring-up: switching down from the highest rate by stretching
+	 * the vertical front porch (ruan: 120 -> 60 Hz grows it from 26 to
+	 * 2784 lines) underruns and wedges the DSI link on 6.6. Until that
+	 * is fixed, offer only the highest rate.
+	 * msm_drm.dfps_max_only=0 turns this off.
+	 */
+	if (dfps_max_only && dfps_caps->dfps_list_len > 1) {
+		DSI_INFO("[%s] dfps: only %u fps offered\n", name,
+			 dfps_caps->max_refresh_rate);
+		dfps_caps->dfps_list[0] = dfps_caps->max_refresh_rate;
+		dfps_caps->dfps_list_len = 1;
+		dfps_caps->min_refresh_rate = dfps_caps->max_refresh_rate;
 	}
 
 error:
@@ -6620,6 +6638,10 @@ error:
 				panel->name, rc);
 		}
 	}
+	if (sy7758_present()) {
+		sy7758_set_panel_name(panel->name);
+		sy7758_panel_power(true);
+	}
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -6685,6 +6707,8 @@ int dsi_panel_disable(struct dsi_panel *panel)
 			dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_VINT_OFF, false);
 		}
 #endif
+		if (sy7758_present())
+			sy7758_panel_power(false);
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF, false);
 		if (rc) {
 			/*

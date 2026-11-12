@@ -38,6 +38,8 @@ struct sy7758_led {
 static LIST_HEAD(sy7758_dev_list);
 static DEFINE_MUTEX(sy7758_dev_list_mutex);
 static const char *sy7758_panel_name;
+/* last non-zero panel level, restored when the panel powers back on */
+static unsigned int sy7758_last_level;
 
 static const struct regmap_config sy7758_regmap_config = {
 	.reg_bits = 8,
@@ -66,6 +68,7 @@ static void sy7758_set_level(struct sy7758_led *sy, u32 lvl)
 
 static void sy7758_enable(struct sy7758_led *sy, u32 lvl)
 {
+	dev_dbg(sy->dev, "enable, level 0x%03x\n", lvl);
 	if (sy->is_sy7758) {
 		sy7758_write(sy, 0x01, 0x83);
 		sy7758_write(sy, 0xa2, 0x20);
@@ -80,6 +83,23 @@ static void sy7758_enable(struct sy7758_led *sy, u32 lvl)
 		sy7758_set_level(sy, lvl);
 	}
 	sy->on = true;
+}
+
+/*
+ * The chips lose their settings when the panel rails go down (doze -> off,
+ * suspend) without a zero level being sent first. Check the enable
+ * register instead of trusting our own state.
+ */
+static bool sy7758_is_enabled(struct sy7758_led *sy)
+{
+	unsigned int val = 0;
+
+	if (regmap_read(sy->regmap, sy->is_sy7758 ? 0x01 : 0x1b, &val)) {
+		dev_dbg(sy->dev, "enable reg read failed\n");
+		return false;
+	}
+	dev_dbg(sy->dev, "enable reg 0x%02x\n", val);
+	return sy->is_sy7758 ? val == 0x83 : val == 0x01;
 }
 
 static void sy7758_disable(struct sy7758_led *sy)
@@ -125,13 +145,14 @@ int sy7758_backlight_update_status(unsigned int level)
 	if (lvl > 0xfff)
 		return -EINVAL;
 
+	if (level)
+		sy7758_last_level = level;
+
 	mutex_lock(&sy7758_dev_list_mutex);
 	list_for_each_entry(sy, &sy7758_dev_list, entry) {
-		if (lvl == sy->level)
-			continue;
 		if (!lvl)
 			sy7758_disable(sy);
-		else if (!sy->on)
+		else if (!sy->on || !sy7758_is_enabled(sy))
 			sy7758_enable(sy, lvl);
 		else
 			sy7758_set_level(sy, lvl);
@@ -141,6 +162,30 @@ int sy7758_backlight_update_status(unsigned int level)
 
 	pr_debug("level %u -> 0x%03x\n", level, lvl);
 	return 0;
+}
+
+/*
+ * Panel power events. The chips are reset when the panel rails go down,
+ * and nothing sends a level on the way back up if Android's brightness
+ * didn't change, so restore the last one ourselves.
+ */
+void sy7758_panel_power(bool on)
+{
+	struct sy7758_led *sy;
+
+	pr_debug("panel power %s, last level %u\n", on ? "on" : "off", sy7758_last_level);
+	if (on) {
+		if (sy7758_last_level)
+			sy7758_backlight_update_status(sy7758_last_level);
+		return;
+	}
+
+	mutex_lock(&sy7758_dev_list_mutex);
+	list_for_each_entry(sy, &sy7758_dev_list, entry) {
+		sy7758_disable(sy);
+		sy->level = 0;
+	}
+	mutex_unlock(&sy7758_dev_list_mutex);
 }
 
 static int sy7758_probe(struct i2c_client *i2c)

@@ -8,5 +8,6 @@ int mi_backlight_sy7758_init(void);
 bool sy7758_present(void);
 void sy7758_set_panel_name(const char *name);
 int sy7758_backlight_update_status(unsigned int level);
+void sy7758_panel_power(bool on);
 
 #endif
