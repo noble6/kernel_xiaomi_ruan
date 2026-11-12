@@ -13,6 +13,7 @@
 
 #include "parrot.dtsi"
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+#include "parrot-sde.dtsi"
 #include "ruan-stubs.dtsi"
 
 / {

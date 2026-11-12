@@ -24,6 +24,14 @@ enum {
 	HARDWARE_PROJECT_P11,
 };
 
+enum {
+	CountryCN = 0,
+	CountryGlobal,
+	CountryIndia,
+	CountryJapan,
+	CountryEEA,
+};
+
 static inline uint32_t get_hw_version_platform(void) { return HARDWARE_PROJECT_UNKNOWN; }
 static inline uint32_t get_hw_country_version(void) { return 0; }
 static inline uint32_t get_hw_version_major(void) { return 0; }
