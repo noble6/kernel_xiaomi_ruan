@@ -986,6 +986,7 @@ config  CHARGER_PARTITION
 	help
 	  Say Y or M here to enable charger partition
 
-source "drivers/power/supply/mca/Kconfig"
+# Xiaomi didn't publish drivers/power/supply/mca
+# source "drivers/power/supply/mca/Kconfig"
 
 endif # POWER_SUPPLY

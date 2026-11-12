@@ -21,7 +21,7 @@ Matching sources on the same branch name in MiCode:
 ## Plan
 
 1. Build with plain make: `ruan/build66.sh` (gki_defconfig, then
-   parrot_consolidate.config and ruan.config).
+   parrot_perf.config and ruan.config).
 2. Boot to Android userspace with storage, display and USB, using
    ruan's 5.10 device tree converted where the 6.6 drivers expect another
    layout (the 6.1 attempt needed that for GENI and RPMh).

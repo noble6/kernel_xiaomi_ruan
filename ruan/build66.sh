@@ -11,7 +11,7 @@ export PATH=$CLANG/bin:$PATH
 M="make -C $K O=$O ARCH=arm64 LLVM=1 LLVM_IAS=1 -j$(nproc)"
 $M gki_defconfig
 "$K"/scripts/kconfig/merge_config.sh -m -O "$O" "$O"/.config \
-	"$K"/arch/arm64/configs/vendor/parrot_consolidate.config \
+	"$K"/arch/arm64/configs/vendor/parrot_perf.config \
 	"$K"/arch/arm64/configs/vendor/ruan.config
 $M olddefconfig
 $M ${*:-Image modules}

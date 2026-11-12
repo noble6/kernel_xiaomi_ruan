@@ -615,6 +615,7 @@ source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
 source "drivers/misc/mchp_pci1xxxx/Kconfig"
-source "drivers/misc/hwid/Kconfig"
+# Xiaomi didn't publish drivers/misc/hwid
+# source "drivers/misc/hwid/Kconfig"
 source "drivers/misc/wifi_gpio/Kconfig"
 endmenu
