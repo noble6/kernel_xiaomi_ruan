@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Base device tree for ruan (Redmi Pad Pro 5G / POCO Pad 5G, SM7435) on
+ * Linux 6.6.
+ *
+ * Qualcomm's parrot.dtsi from MiCode/kernel_devicetree annibale-w-oss
+ * (32fd4ddcedd4), with the reserved memory that differs on ruan's firmware
+ * set back to the stock values. The bootloader then applies ruan's stock
+ * dtbo overlay on top of it, as it does with the 5.10 base.
+ */
+
+/dts-v1/;
+
+#include "parrot.dtsi"
+#include "ruan-stubs.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot SoC";
+	compatible = "qcom,parrot";
+	qcom,board-id = <0 0>;
+};
+
+/* ruan's ADSP firmware is larger and lives higher than on the reference board */
+&adsp_mem {
+	reg = <0x0 0x9a200000 0x0 0x2900000>;
+};
+
+/* The trust UI VM that ruan's hypervisor sets up */
+&trust_ui_vm_mem {
+	reg = <0x0 0xe0b00000 0x0 0x100000>;
+};
+
+/* Stock keeps pstore at a fixed address, keep it there */
+&ramoops_mem {
+	/delete-property/ alloc-ranges;
+	/delete-property/ size;
+	reg = <0x0 0x80d00000 0x0 0x200000>;
+};

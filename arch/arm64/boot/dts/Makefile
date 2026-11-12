@@ -39,3 +39,4 @@ vendor  := $(dtstree)/vendor
 ifneq "$(wildcard $(vendor)/Makefile)" ""
 	subdir-y += vendor
 endif
+subdir-y += ruan
